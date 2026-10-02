@@ -85,8 +85,6 @@ Network troubleshooting, the Cisco troubleshooting methodology, layered (OSI) tr
 
 **Match the tool to the layer.** Telnet showed me the port was closed (Layer 4), ping told me the path was broken, and traceroute showed me where it broke (R2), which is a lot more useful than just knowing the ping failed.
 
-`[closing line: something honest about what was hardest, or what you would do differently]`
-
 ## Repo Contents
 
 ```
