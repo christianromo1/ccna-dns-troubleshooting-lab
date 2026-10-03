@@ -14,9 +14,27 @@ Looking back, the three problems were the DNS service on the server being turned
 
 ## How It Went
 
-I started at Layer 4, using Telnet to test whether port 53 was reachable on the DNS server's IP address. I fixed that issue by going into the DNS configuration and turning on the DNS service.
+I started at Layer 4, using Telnet to test whether port 53 was reachable on the DNS server's IP address. It wasn't, so I opened the DNS server, went to the Services tab, and found that the DNS service was turned off. I turned it on and tried to ping R1 from R3, which still failed.
 
-When that didn't fix the problem, I sent a ping from R3 to the DNS server. The ping failed, so I used traceroute to find the break in connectivity.
+Next I sent a ping from R3 to the DNS server. That failed too, so I used traceroute to find the break in connectivity.
+
+![Failed ping and traceroute from R3](images/01-ping-and-traceroute-from-r3.png)
+
+The traceroute stopped at R2 (the ping came back with U's and the traceroute with !H, which from my understanding means R2 was answering with "unreachable" messages instead of passing the traffic along). So I went into privileged exec mode on R2 and used the `show ip interface brief` command.
+
+![R2's interface status, followed by no shutdown on f0/0](images/02-r2-interface-status-and-no-shutdown.png)
+
+R2's f0/0 interface, the one connecting it to the 10.10.10.0/24 network, was administratively down, so I used the `no shutdown` command to enable it. After that I could ping 10.10.10.10 (the DNS server) and 10.10.10.1 (R1) from R3, but name resolution still wasn't working on R3.
+
+This is where I went in loops. Pinging hostnames from R1 and R2 worked fine, so I double (maybe quadruple) checked the DNS server to no avail. Since the other routers could resolve names and R3 couldn't, the problem had to be on R3 itself.
+
+I finally realized, "what if the commands for using DNS on R3 haven't been applied?" A Cisco router needs two things to use DNS: name lookups turned on with `ip domain-lookup` (it's on by default, but it can be switched off) and a server to ask, set with `ip name-server`. I rushed to R3's CLI, ran `ip domain-lookup` and `ip name-server 10.10.10.10`, tried a `ping r1`, and it worked!
+
+![The two DNS commands entered on R3](images/03-r3-dns-commands.png)
+
+![Ping to r1 by name from R3, resolved through the DNS server](images/04-r3-ping-r1-by-name.png)
+
+It turned out this was a Layer 4, Layer 3, and device configuration troubleshooting issue.
 
 ![Failed ping and traceroute from R3](images/01-ping-and-traceroute-from-r3.png)
 
@@ -34,38 +52,6 @@ Then I remembered the two commands that need to be enabled on a device for DNS t
 
 ![Ping to r1 by name from R3, resolved through the DNS server](images/04-r3-ping-r1-by-name.png)
 
-## Step by Step
-
-### 1. Define the Problem
-
-DNS was "broken." R3 (10.10.20.1) couldn't ping R1 (10.10.10.1) or use DNS to resolve its hostname.
-
-### 2. Gather Information
-
-- (Layer 4) I used Telnet to see if port 53 on 10.10.10.10 (the DNS server) was open. It was not available.
-- (Layer 3) I sent a ping from R3 to the DNS server, and it didn't work.
-- (Layer 3) I sent a ping from R3 to R1, and it didn't work.
-- (Layer 3) I sent a traceroute from R3, and the packets reached R2 and then stopped.
-
-### 3. Analyze Information and Test Hypothesis
-
-I skipped "eliminate possible causes" and "propose hypothesis," which may or may not have helped me when I was going in loops trying to figure out why DNS was still down after I thought I had fixed everything.
-
-Since port 53 was down on 10.10.10.10, I opened the DNS server, went to the Services tab, and found that the DNS service was off. I enabled it and tried to ping R1 from R3, which still failed.
-
-Next I investigated R2, since that's where connectivity dropped during my earlier pings. Using `show ip interface brief`, I found that the f0/0 interface that connects R2 to the 10.10.10.0/24 network was disabled, so I used `no shutdown` to enable it.
-
-After this, I was able to ping 10.10.10.10 (the DNS server) and 10.10.10.1 (R1) from R3, but DNS name resolution was still not working on R3. I tested pinging the hostnames r2 and r3 from R1, and pinged r1 and r3 from R2, and those pings and DNS requests resolved. I double (maybe quadruple) checked the DNS server to no avail.
-
-### 4. Solve the Problem
-
-I finally realized, "what if the commands for using DNS on R3 haven't been applied?" I rushed to R3's CLI and typed `ip domain-lookup` and `ip name-server 10.10.10.10`. After this, I tried a `ping r1` from R3, and it worked! It turned out this was a Layer 4, Layer 3, and device configuration troubleshooting issue.
-
-## How This Fits the Cisco Methodology
-
-The Cisco troubleshooting methodology has eight steps: define the problem, gather information, analyze the information, eliminate possible causes, propose a hypothesis, test the hypothesis, solve the problem, and document the solution. In this lab I defined the problem, gathered information with Telnet, ping, and traceroute, analyzed what those results pointed to, tested my fixes one at a time, solved it, and documented it here.
-
-Eliminating causes and proposing a hypothesis are the two steps I skipped, and honestly, that is where most of my wasted time came from.
 
 ## Commands I Used
 
