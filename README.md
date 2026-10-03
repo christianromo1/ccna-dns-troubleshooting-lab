@@ -69,7 +69,9 @@ Network troubleshooting, the Cisco troubleshooting methodology, layered (OSI) tr
 
 **Compare what works with what doesn't.** R1 and R2 could resolve names and R3 couldn't, which told me the DNS server was fine and the problem was on R3 itself.
 
-**Match the tool to the layer.** Telnet showed me the port was closed (Layer 4), ping told me the path was broken, and traceroute showed me where it broke (R2), which is a lot more useful than just knowing the ping failed.
+**Match the tool to the layer.** Telnet showed me the port was closed (Layer 4), ping told me the path was broken, and traceroute showed me where it broke (R2), which is a lot more useful than just knowing the ping failed. 
+
+The hardest part was the last fault. Once ping worked, I was convinced the DNS server was still the problem, and the answer was sitting on R3 the whole time.
 
 ## Repo Contents
 
